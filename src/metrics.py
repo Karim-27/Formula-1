@@ -1,21 +1,20 @@
 import pandas as pd
-import numpy as np
 
 
-def get_braking_point(df: pd.DataFrame, brake_threshold: float = 10.0):
+def get_braking_point(corner_df: pd.DataFrame):
     '''
     Returns the distance where the driver begins braking
     '''
-    braking_data = df[df['Brake']]
+    braking_data = corner_df[corner_df['Brake']]
     if not braking_data.empty:
         return braking_data['Distance'].iloc[0]
     return None
 
-def get_braking_distance(df: pd.DataFrame, brake_threshold: float = 10.0):
+def get_braking_distance(corner_df: pd.DataFrame):
     '''
     Measures the distance where the driver was braking
     '''
-    braking_data = df['Brake'].astype(bool).astype(int)
+    braking_data = corner_df['Brake'].astype(bool).astype(int)
     brake_diff = braking_data.diff().fillna(0)
 
     start_point = brake_diff[brake_diff == 1].index
@@ -24,12 +23,12 @@ def get_braking_distance(df: pd.DataFrame, brake_threshold: float = 10.0):
     if start_point.empty or end_point.empty:
         return 0
 
-    start = df.loc[start_point[0], 'Distance']
+    start = corner_df.loc[start_point[0], 'Distance']
     valid_end = end_point[end_point > start_point[0]]
     if valid_end.empty:
         return 0
 
-    end = df.loc[end_point[0], 'Distance']
+    end = corner_df.loc[end_point[0], 'Distance']
     return end - start
 
 def get_min_corner_speed(corner_df: pd.DataFrame):
@@ -40,7 +39,7 @@ def get_min_corner_speed(corner_df: pd.DataFrame):
         return corner_df['Speed'].min()
     return None
 
-def get_throttle_pickup(corner_df: pd.DataFrame, threshold: float = 10.0):
+def get_throttle_pickup(corner_df: pd.DataFrame, threshold: float = 50.0):
     '''
     Returns the point where the driver's throttle is above 80% after breaking
     '''

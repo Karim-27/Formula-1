@@ -4,7 +4,7 @@ import pandas
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def find_braking_points(df: pandas.DataFrame, min_zone_length = 3):
+def find_braking_points(df: pandas.DataFrame, min_zone_length = 2):
     '''
     Finds braking zones in the dataframe.
     '''
@@ -24,19 +24,20 @@ def find_braking_points(df: pandas.DataFrame, min_zone_length = 3):
             end = end_candidates[0]
 
             if end - start >= min_zone_length:
-                braking_zones.append((start, end))
+                braking_zones.append((int(start), int(end)))
 
     return braking_zones
 
-def get_corner(name:str) -> Tuple[int, int]:
-    '''
 
-    '''
-    return austria_corners.get(name.upper(), (None, None))
+def slice_corner(df: pd.DataFrame, braking_zones, zone) -> pd.DataFrame:
+    if zone >= len(braking_zones):
+        print(f"Braking zone {zone} is out of range")
+        return df
 
-def slice_corner(df: pd.DataFrame, corner: str) -> pd.DataFrame:
-    start, end = get_corner(corner)
-    if start is None or end is None:
-        raise ValueError('start and end are required')
-    return df[(df['Distance'] >= start) & (df['Distance'] <= end)]
+    start, end = braking_zones[zone]
+
+    start = max(start - 1, 0)
+    end = min(end +1, len(df) - 1)
+
+    return df.iloc[start:end+1]
 

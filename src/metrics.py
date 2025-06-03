@@ -13,36 +13,63 @@ def get_braking_point(df: pd.DataFrame, brake_threshold: float = 10.0):
 
 def get_braking_distance(df: pd.DataFrame, brake_threshold: float = 10.0):
     '''
-    Measures the distance where the driver was braking above the threshold
+    Measures the distance where the driver was braking
     '''
-    braking_data = df[df['Brake']]
-    if not braking_data.empty:
-        start = braking_data['Distance'].iloc[0]
-        end = braking_data['Distance'].iloc[-1]
-        return end - start
-    return None
+    braking_data = df['Brake'].astype(bool).astype(int)
+    brake_diff = braking_data.diff().fillna(0)
 
-def get_min_corner_speed(df: pd.DataFrame, start_dist: float, end_dist: float):
+    start_point = brake_diff[brake_diff == 1].index
+    end_point = brake_diff[brake_diff == -1].index
+
+    if start_point.empty or end_point.empty:
+        return 0
+
+    start = df.loc[start_point[0], 'Distance']
+    valid_end = end_point[end_point > start_point[0]]
+    if valid_end.empty:
+        return 0
+
+    end = df.loc[end_point[0], 'Distance']
+    return end - start
+
+def get_min_corner_speed(corner_df: pd.DataFrame):
     '''
     Returns the slowest speed of the driver through the corner
     '''
-    corner_data = df[(df['Distance'] >= start_dist) & (df['Distance'] <= end_dist)]
-    if not corner_data.empty:
-        return corner_data['Speed'].min()
+    if not corner_df.empty:
+        return corner_df['Speed'].min()
     return None
 
-def get_throttle_pickup(df: pd.DataFrame, start_dist: float, end_dist: float, threshold: float = 80.0):
+def get_throttle_pickup(corner_df: pd.DataFrame, threshold: float = 10.0):
     '''
-    Returns the point where the driver's throttle is above 80%
+    Returns the point where the driver's throttle is above 80% after breaking
     '''
-    corner_exit_data = df[(df['Distance'] >= start_dist) & (df['Distance'] <= end_dist)]
-    throttle_data = corner_exit_data[corner_exit_data['Throttle'] >= threshold]
-    if not throttle_data.empty:
-        return throttle_data['Distance'].iloc[0]
-    return None
+    if corner_df.empty:
+        return None
 
-def get_steering_smoothness(df: pd.DataFrame, start_dist: float, end_dist: float):
-    data = df[(df['Distance'] >= start_dist) & (df['Distance'] <= end_dist)]
-    return data['Steering Angle'].diff().abs().mean()
+    braking_distance = get_braking_distance(corner_df)
+    if braking_distance == 0:
+        return None
+
+    brake_series = corner_df['Brake'].astype(int)
+    brake_diff = brake_series.diff().fillna(0)
+    start_point = brake_diff[brake_diff == 1].index
+    end_point = brake_diff[brake_diff == -1].index
+
+    if start_point.empty or end_point.empty:
+        return None
+
+    brake_end_point = end_point[end_point > start_point[0]]
+    if brake_end_point.empty:
+        return None
+
+    throttle_df = corner_df.loc[brake_end_point[0]:]
+    throttle_on = throttle_df[throttle_df['Throttle'] > threshold]
+
+    if throttle_on.empty:
+        return None
+
+    return throttle_on['Distance'].iloc[0]
+
 
 
